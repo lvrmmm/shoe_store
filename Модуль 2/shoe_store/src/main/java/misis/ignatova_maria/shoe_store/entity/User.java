@@ -34,6 +34,18 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    public boolean isAdmin() {
+        return role != null && "Администратор".equals(role.getName());
+    }
+
+    public boolean isManager() {
+        return role != null && "Менеджер".equals(role.getName());
+    }
+
+    public boolean isGuest() {
+        return id == 0 || (role != null && "Гость".equals(role.getName()));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

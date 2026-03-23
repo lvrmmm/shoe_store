@@ -12,7 +12,6 @@ import java.awt.*;
 public class ShoeStoreApplication {
 
     public static void main(String[] args) {
-        // Запускаем Spring контекст в режиме, совместимом с Swing
         new SpringApplicationBuilder(ShoeStoreApplication.class)
                 .headless(false)
                 .run(args);
@@ -24,7 +23,6 @@ public class ShoeStoreApplication {
         });
 
         setDockIcon();
-
     }
 
     private static void setDockIcon() {

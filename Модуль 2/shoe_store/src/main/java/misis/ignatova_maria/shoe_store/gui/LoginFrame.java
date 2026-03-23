@@ -84,7 +84,10 @@ public class LoginFrame extends JFrame {
         String password = new String(passwordField.getPassword());
 
         if (login.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Введите логин и пароль", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Введите логин и пароль",
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -94,7 +97,12 @@ public class LoginFrame extends JFrame {
                             dispose();
                             new ProductListFrame(user).setVisible(true);
                         },
-                        () -> JOptionPane.showMessageDialog(this, "Неверный логин или пароль", "Ошибка", JOptionPane.ERROR_MESSAGE)
+                        () -> {
+                            JOptionPane.showMessageDialog(this,
+                                    "Неверный логин или пароль",
+                                    "Ошибка",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
                 );
     }
 

@@ -1,6 +1,5 @@
 package misis.ignatova_maria.shoe_store.gui.model;
 
-
 import misis.ignatova_maria.shoe_store.entity.Product;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
@@ -23,19 +22,13 @@ public class ProductTableModel extends AbstractTableModel {
     }
 
     @Override
-    public int getRowCount() {
-        return products == null ? 0 : products.size();
-    }
+    public int getRowCount() { return products == null ? 0 : products.size(); }
 
     @Override
-    public int getColumnCount() {
-        return columns.length;
-    }
+    public int getColumnCount() { return columns.length; }
 
     @Override
-    public String getColumnName(int column) {
-        return columns[column];
-    }
+    public String getColumnName(int column) { return columns[column]; }
 
     @Override
     public Object getValueAt(int row, int column) {
