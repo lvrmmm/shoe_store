@@ -142,11 +142,9 @@ public class ProductListFrame extends JFrame {
 		panel.setBackground(Color.decode("#7FFF00"));
 		panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-		// ЛЕВАЯ ПАНЕЛЬ - ПОИСК, ФИЛЬТР, СОРТИРОВКА
 		JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
 		leftPanel.setBackground(Color.decode("#7FFF00"));
 
-		// Поиск, фильтр и сортировка - ТОЛЬКО для менеджера и админа
 		if (currentUser.isManager() || currentUser.isAdmin()) {
 			leftPanel.add(new JLabel("🔍 Поиск:"));
 			searchField = new JTextField(20);
@@ -168,11 +166,9 @@ public class ProductListFrame extends JFrame {
 
 		panel.add(leftPanel, BorderLayout.WEST);
 
-		// ПРАВАЯ ПАНЕЛЬ - КНОПКИ ДЕЙСТВИЙ
 		JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
 		rightPanel.setBackground(Color.decode("#7FFF00"));
 
-		// КНОПКА "ЗАКАЗЫ" для менеджера и администратора
 		if (currentUser.isManager() || currentUser.isAdmin()) {
 			JButton ordersButton = new JButton("📋 Заказы");
 			ordersButton.setBackground(Color.decode("#FFA500"));
@@ -184,7 +180,6 @@ public class ProductListFrame extends JFrame {
 			rightPanel.add(ordersButton);
 		}
 
-		// КНОПКА "ДОБАВИТЬ ТОВАР" только для администратора
 		if (currentUser.isAdmin()) {
 			JButton addButton = new JButton("+ Добавить товар");
 			addButton.setBackground(Color.decode("#00FA9A"));
@@ -202,7 +197,6 @@ public class ProductListFrame extends JFrame {
 	}
 
 	private void openOrderList() {
-		// Скрываем текущее окно и открываем окно заказов
 		this.setVisible(false);
 		OrderListFrame orderListFrame = new OrderListFrame(this, currentUser);
 		orderListFrame.setVisible(true);
@@ -314,7 +308,6 @@ public class ProductListFrame extends JFrame {
 
 	private boolean matchesSearch(Product p, String searchText) {
 		String lowerSearch = searchText.toLowerCase().trim();
-
 		return matchesField(p.getArticle(), lowerSearch) || matchesField(p.getName(), lowerSearch)
 				|| matchesDescription(p.getDescription(), lowerSearch)
 				|| matchesField(p.getCategory().getName(), lowerSearch)
@@ -341,7 +334,6 @@ public class ProductListFrame extends JFrame {
 		refreshCardsDisplay();
 	}
 
-	// При обновлении списка товаров очищаем кэш для обновленных фото
 	private void refreshCardsDisplay() {
 		cardsPanel.removeAll();
 
@@ -352,7 +344,6 @@ public class ProductListFrame extends JFrame {
 			cardsPanel.add(emptyLabel);
 		} else {
 			for (Product product : filteredAndSearchedProducts) {
-				// Очищаем кэш для этого товара
 				if (product.getPhoto() != null) {
 					ImageLoader.refreshImage(product.getPhoto());
 				}
@@ -372,87 +363,76 @@ public class ProductListFrame extends JFrame {
 		});
 	}
 
-	private JPanel createProductCard(Product product) {
-		boolean inStock = product.getQuantity() != null && product.getQuantity() > 0;
-		double discount = product.getDiscount() != null ? product.getDiscount().doubleValue() : 0;
+	// ==================== МЕТОДЫ СОЗДАНИЯ КАРТОЧКИ ТОВАРА ====================
 
-		Color bg = discount > 15 ? Color.decode("#2E8B57") : Color.WHITE;
-		Color textColor = (discount > 15 && inStock) ? Color.WHITE : Color.BLACK;
-		Color borderColor = Color.decode("#00FA9A");
+	private JPanel createProductCard(Product product) {
+		ProductCardContext ctx = new ProductCardContext(product);
 
 		JPanel card = new JPanel(new BorderLayout(15, 10));
-		card.setBackground(bg);
-		card.setBorder(BorderFactory.createLineBorder(borderColor, 2));
+		card.setBackground(ctx.getBg());
+		card.setBorder(BorderFactory.createLineBorder(ctx.getBorderColor(), 2));
 		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
 		setupCardDoubleClick(card, product);
 
-		JPanel photoPanel = createPhotoPanel(product, bg, borderColor);
-		JPanel infoPanel = createInfoPanel(product, bg, borderColor, textColor, inStock, discount);
-		JPanel rightPanel = createRightPanel(product, bg, borderColor, textColor, discount);
-
-		card.add(photoPanel, BorderLayout.WEST);
-		card.add(infoPanel, BorderLayout.CENTER);
-		card.add(rightPanel, BorderLayout.EAST);
+		card.add(createPhotoPanel(ctx), BorderLayout.WEST);
+		card.add(createInfoPanel(ctx), BorderLayout.CENTER);
+		card.add(createRightPanel(ctx), BorderLayout.EAST);
 
 		return card;
 	}
 
-	private JPanel createPhotoPanel(Product product, Color bg, Color borderColor) {
+	private JPanel createPhotoPanel(ProductCardContext ctx) {
 		JPanel photoPanel = new JPanel(new BorderLayout());
-		photoPanel.setBackground(bg);
+		photoPanel.setBackground(ctx.getBg());
 		photoPanel.setPreferredSize(new Dimension(150, 120));
-		photoPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
+		photoPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ctx.getBorderColor(), 1),
 				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
 		JLabel image = new JLabel();
 		image.setHorizontalAlignment(SwingConstants.CENTER);
 		image.setVerticalAlignment(SwingConstants.CENTER);
-		image.setIcon(ImageLoader.loadImage(product.getPhoto(), 120, 120));
+		image.setIcon(ImageLoader.loadImage(ctx.getProduct().getPhoto(), 120, 120));
 		photoPanel.add(image);
 
 		return photoPanel;
 	}
 
-	private JPanel createInfoPanel(Product product, Color bg, Color borderColor, Color textColor, boolean inStock,
-			double discount) {
+	private JPanel createInfoPanel(ProductCardContext ctx) {
 		JPanel infoPanel = new JPanel();
 		infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-		infoPanel.setBackground(bg);
-		infoPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
+		infoPanel.setBackground(ctx.getBg());
+		infoPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ctx.getBorderColor(), 1),
 				BorderFactory.createEmptyBorder(5, 10, 5, 10)));
 
-		JPanel headerPanel = createHeaderPanel(product, textColor);
-		infoPanel.add(headerPanel);
+		infoPanel.add(createHeaderPanel(ctx));
 		infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
 
-		infoPanel.add(createInfoLabel("Описание: " + safe(product.getDescription()), textColor));
-		infoPanel.add(createInfoLabel("Производитель: " + product.getManufacturer().getName(), textColor));
-		infoPanel.add(createInfoLabel("Поставщик: " + product.getSupplier().getName(), textColor));
+		infoPanel.add(createInfoLabel("Описание: " + safe(ctx.getProduct().getDescription()), ctx.getTextColor()));
+		infoPanel.add(
+				createInfoLabel("Производитель: " + ctx.getProduct().getManufacturer().getName(), ctx.getTextColor()));
+		infoPanel.add(createInfoLabel("Поставщик: " + ctx.getProduct().getSupplier().getName(), ctx.getTextColor()));
 
-		addPriceInfo(infoPanel, product, textColor, discount);
-
-		infoPanel.add(createInfoLabel("Ед. изм.: " + product.getUnit().getName(), textColor));
-
-		addQuantityInfo(infoPanel, product, bg, textColor, inStock);
+		addPriceInfo(infoPanel, ctx);
+		infoPanel.add(createInfoLabel("Ед. изм.: " + ctx.getProduct().getUnit().getName(), ctx.getTextColor()));
+		addQuantityInfo(infoPanel, ctx);
 
 		return infoPanel;
 	}
 
-	private JPanel createHeaderPanel(Product product, Color textColor) {
+	private JPanel createHeaderPanel(ProductCardContext ctx) {
 		JPanel headerPanel = new JPanel(new BorderLayout());
 		headerPanel.setBackground(null);
 		headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 		headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-		JLabel title = new JLabel(product.getCategory().getName() + " | " + product.getName());
+		JLabel title = new JLabel(ctx.getProduct().getCategory().getName() + " | " + ctx.getProduct().getName());
 		title.setFont(new Font("Times New Roman", Font.BOLD, 14));
-		title.setForeground(textColor);
+		title.setForeground(ctx.getTextColor());
 		headerPanel.add(title, BorderLayout.WEST);
 
 		if (currentUser.isAdmin()) {
-			JButton deleteButton = createDeleteButton(product);
-			headerPanel.add(deleteButton, BorderLayout.EAST);
+			headerPanel.add(createDeleteButton(ctx.getProduct()), BorderLayout.EAST);
 		}
 
 		return headerPanel;
@@ -485,64 +465,65 @@ public class ProductListFrame extends JFrame {
 		}
 	}
 
-	private void addPriceInfo(JPanel panel, Product product, Color textColor, double discount) {
-		if (discount > 0) {
-			BigDecimal finalPrice = product.getPrice().multiply(BigDecimal.valueOf(1 - discount / 100));
-			String priceHtml = "<html>Цена: <font color='red'><strike>" + priceFormat.format(product.getPrice())
-					+ " ₽</strike></font>" + "  <font color='black'><b>" + priceFormat.format(finalPrice)
-					+ " ₽</b></font></html>";
+	private void addPriceInfo(JPanel panel, ProductCardContext ctx) {
+		if (ctx.getDiscount() > 0) {
+			BigDecimal finalPrice = ctx.getProduct().getPrice()
+					.multiply(BigDecimal.valueOf(1 - ctx.getDiscount() / 100));
+			String priceHtml = "<html>Цена: <font color='red'><strike>"
+					+ priceFormat.format(ctx.getProduct().getPrice()) + " ₽</strike></font>"
+					+ "  <font color='black'><b>" + priceFormat.format(finalPrice) + " ₽</b></font></html>";
 			JLabel priceLabel = new JLabel(priceHtml);
 			priceLabel.setFont(new Font("Times New Roman", Font.PLAIN, 12));
-			priceLabel.setForeground(textColor);
+			priceLabel.setForeground(ctx.getTextColor());
 			priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 			priceLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 			panel.add(priceLabel);
 		} else {
-			panel.add(createInfoLabel("Цена: " + priceFormat.format(product.getPrice()) + " ₽", textColor));
+			panel.add(createInfoLabel("Цена: " + priceFormat.format(ctx.getProduct().getPrice()) + " ₽",
+					ctx.getTextColor()));
 		}
 	}
 
-	private void addQuantityInfo(JPanel panel, Product product, Color bg, Color textColor, boolean inStock) {
+	private void addQuantityInfo(JPanel panel, ProductCardContext ctx) {
 		JPanel qtyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-		qtyPanel.setBackground(bg);
+		qtyPanel.setBackground(ctx.getBg());
 		qtyPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		qtyPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 
-		JLabel qty = new JLabel("Количество: " + product.getQuantity());
+		JLabel qty = new JLabel("Количество: " + ctx.getProduct().getQuantity());
 		qty.setFont(new Font("Times New Roman", Font.PLAIN, 12));
 
-		if (!inStock) {
+		if (!ctx.isInStock()) {
 			qty.setOpaque(true);
 			qty.setBackground(Color.CYAN);
 			qty.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
 		} else {
-			qty.setForeground(textColor);
+			qty.setForeground(ctx.getTextColor());
 		}
 
 		qtyPanel.add(qty);
 		panel.add(qtyPanel);
 	}
 
-	private JPanel createRightPanel(Product product, Color bg, Color borderColor, Color textColor, double discount) {
+	private JPanel createRightPanel(ProductCardContext ctx) {
 		JPanel rightPanel = new JPanel(new BorderLayout());
-		rightPanel.setBackground(bg);
+		rightPanel.setBackground(ctx.getBg());
 		rightPanel.setPreferredSize(new Dimension(140, 140));
 		rightPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		if (discount > 0) {
-			JPanel discountPanel = createDiscountPanel(bg, borderColor, textColor, discount);
-			rightPanel.add(discountPanel, BorderLayout.CENTER);
+		if (ctx.getDiscount() > 0) {
+			rightPanel.add(createDiscountPanel(ctx), BorderLayout.CENTER);
 		}
 
 		return rightPanel;
 	}
 
-	private JPanel createDiscountPanel(Color bg, Color borderColor, Color textColor, double discount) {
+	private JPanel createDiscountPanel(ProductCardContext ctx) {
 		JPanel discountPanel = new JPanel(new GridBagLayout());
-		discountPanel.setBackground(bg);
+		discountPanel.setBackground(ctx.getBg());
 		discountPanel.setPreferredSize(new Dimension(120, 80));
-		discountPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
-				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+		discountPanel.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(ctx.getBorderColor(), 1), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridx = 0;
@@ -550,12 +531,12 @@ public class ProductListFrame extends JFrame {
 
 		JLabel discountTitle = new JLabel("Действующая скидка");
 		discountTitle.setFont(new Font("Times New Roman", Font.PLAIN, 10));
-		discountTitle.setForeground(textColor);
+		discountTitle.setForeground(ctx.getTextColor());
 		discountTitle.setHorizontalAlignment(SwingConstants.CENTER);
 		gbc.gridy = 0;
 		discountPanel.add(discountTitle, gbc);
 
-		JLabel discountLabel = new JLabel((int) discount + "%");
+		JLabel discountLabel = new JLabel((int) ctx.getDiscount() + "%");
 		discountLabel.setFont(new Font("Times New Roman", Font.BOLD, 18));
 		discountLabel.setForeground(Color.RED);
 		gbc.gridy = 1;
@@ -578,7 +559,6 @@ public class ProductListFrame extends JFrame {
 		}
 	}
 
-	// Вспомогательный метод - ВСЕГДА с LEFT_ALIGNMENT
 	private JLabel createInfoLabel(String text, Color textColor) {
 		JLabel label = new JLabel(text);
 		label.setFont(new Font("Times New Roman", Font.PLAIN, 12));

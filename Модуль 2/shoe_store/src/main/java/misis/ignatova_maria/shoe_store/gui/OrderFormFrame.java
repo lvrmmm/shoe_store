@@ -1,15 +1,14 @@
 package misis.ignatova_maria.shoe_store.gui;
 
 import java.awt.*;
-import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
 
-import javax.swing.table.AbstractTableModel;
 import javax.swing.*;
 
 import misis.ignatova_maria.shoe_store.entity.*;
+import misis.ignatova_maria.shoe_store.gui.model.OrderItemsTableModel;
 import misis.ignatova_maria.shoe_store.service.OrderService;
 import misis.ignatova_maria.shoe_store.service.ProductService;
 import misis.ignatova_maria.shoe_store.service.UserService;
@@ -33,14 +32,17 @@ public class OrderFormFrame extends JFrame {
 	private JSpinner deliveryDateSpinner;
 	private JTextField pickupCodeField;
 
-	// Таблица товаров в заказе
+	// Таблица товаров
 	private JTable itemsTable;
-	private OrderItemsTableModel itemsTableModel;
-	private List<OrderItem> orderItems;
+	private OrderItemManager itemManager;
 
 	// Добавление товара
 	private JComboBox<Product> productCombo;
 	private JSpinner quantitySpinner;
+
+	// Валидатор и загрузчик
+	private OrderFormValidator validator;
+	private OrderFormDataLoader dataLoader;
 
 	public OrderFormFrame(OrderListFrame parent, Order orderToEdit, User currentUser) {
 		this.orderService = SpringContext.getBean(OrderService.class);
@@ -49,9 +51,9 @@ public class OrderFormFrame extends JFrame {
 		this.parentFrame = parent;
 		this.editingOrder = orderToEdit;
 		this.isEditMode = (orderToEdit != null);
-		this.orderItems = new ArrayList<>();
 
 		initUI();
+		setupComponents();
 		loadData();
 		setLocationRelativeTo(parent);
 	}
@@ -68,10 +70,11 @@ public class OrderFormFrame extends JFrame {
 		mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 		mainPanel.setBackground(Color.WHITE);
 
+		// Используем FormBuilder для создания панелей
 		JPanel formPanel = createFormPanel();
 		JPanel addItemPanel = createAddItemPanel();
 		JPanel itemsPanel = createItemsPanel();
-		JPanel buttonPanel = createButtonPanel();
+		JPanel buttonPanel = FormBuilder.createButtonPanel(createSaveButton(), createCancelButton());
 
 		JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
 		centerPanel.add(addItemPanel, BorderLayout.NORTH);
@@ -85,9 +88,8 @@ public class OrderFormFrame extends JFrame {
 	}
 
 	private JPanel createFormPanel() {
-		JPanel panel = new JPanel(new GridBagLayout());
-		panel.setBackground(Color.WHITE);
-		panel.setBorder(BorderFactory.createTitledBorder("Информация о заказе"));
+		// Используем FormBuilder для создания панели с заголовком
+		JPanel panel = FormBuilder.createFormPanel("Информация о заказе");
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.insets = new Insets(5, 10, 5, 10);
 		gbc.anchor = GridBagConstraints.WEST;
@@ -95,85 +97,35 @@ public class OrderFormFrame extends JFrame {
 
 		int row = 0;
 
-		// Покупатель (выбор из существующих пользователей)
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Покупатель:*"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
+		// Покупатель
 		userCombo = new JComboBox<>();
-		loadUsers();
 		userCombo.setRenderer(new UserListCellRenderer());
-		panel.add(userCombo, gbc);
-		row++;
+		FormBuilder.addField(panel, gbc, "Покупатель:*", userCombo, row++);
 
 		// Статус заказа
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Статус заказа:*"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
 		statusCombo = new JComboBox<>();
-		loadStatuses();
 		statusCombo.setRenderer(new StatusListCellRenderer());
-		panel.add(statusCombo, gbc);
-		row++;
+		FormBuilder.addField(panel, gbc, "Статус заказа:*", statusCombo, row++);
 
 		// Пункт выдачи
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Адрес пункта выдачи:*"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
 		pickupPointCombo = new JComboBox<>();
-		loadPickupPoints();
 		pickupPointCombo.setRenderer(new PickupPointListCellRenderer());
-		panel.add(pickupPointCombo, gbc);
-		row++;
+		FormBuilder.addField(panel, gbc, "Адрес пункта выдачи:*", pickupPointCombo, row++);
 
 		// Дата заказа
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Дата заказа:*"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
-		SpinnerDateModel dateModel = new SpinnerDateModel();
-		orderDateSpinner = new JSpinner(dateModel);
-		JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(orderDateSpinner, "dd.MM.yyyy");
-		orderDateSpinner.setEditor(dateEditor);
-		panel.add(orderDateSpinner, gbc);
-		row++;
+		orderDateSpinner = FormBuilder.createDateSpinner();
+		FormBuilder.addField(panel, gbc, "Дата заказа:*", orderDateSpinner, row++);
 
 		// Дата выдачи
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Дата выдачи:*"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
-		SpinnerDateModel deliveryModel = new SpinnerDateModel();
-		deliveryDateSpinner = new JSpinner(deliveryModel);
-		JSpinner.DateEditor deliveryEditor = new JSpinner.DateEditor(deliveryDateSpinner, "dd.MM.yyyy");
-		deliveryDateSpinner.setEditor(deliveryEditor);
-		panel.add(deliveryDateSpinner, gbc);
-		row++;
+		deliveryDateSpinner = FormBuilder.createDateSpinner();
+		FormBuilder.addField(panel, gbc, "Дата выдачи:*", deliveryDateSpinner, row++);
 
-		// Код получения (только для чтения)
-		gbc.gridx = 0;
-		gbc.gridy = row;
-		gbc.weightx = 0;
-		panel.add(new JLabel("Код получения:"), gbc);
-		gbc.gridx = 1;
-		gbc.weightx = 1.0;
+		// Код получения
 		pickupCodeField = new JTextField(20);
 		pickupCodeField.setEditable(false);
 		pickupCodeField.setBackground(Color.LIGHT_GRAY);
 		pickupCodeField.setToolTipText("Генерируется автоматически при сохранении");
-		panel.add(pickupCodeField, gbc);
+		FormBuilder.addField(panel, gbc, "Код получения:", pickupCodeField, row);
 
 		return panel;
 	}
@@ -186,7 +138,6 @@ public class OrderFormFrame extends JFrame {
 		panel.add(new JLabel("Артикул товара:*"));
 
 		productCombo = new JComboBox<>();
-		loadProducts();
 		productCombo.setRenderer(new ProductListCellRenderer());
 		productCombo.setPreferredSize(new Dimension(350, 25));
 		panel.add(productCombo);
@@ -204,7 +155,7 @@ public class OrderFormFrame extends JFrame {
 
 		JButton removeItemButton = new JButton("− Удалить выбранный");
 		removeItemButton.setBackground(Color.decode("#FFA07A"));
-		removeItemButton.addActionListener(e -> removeSelectedItem());
+		removeItemButton.addActionListener(e -> itemManager.removeSelectedItem());
 		panel.add(removeItemButton);
 
 		return panel;
@@ -214,13 +165,6 @@ public class OrderFormFrame extends JFrame {
 		JPanel panel = new JPanel(new BorderLayout());
 		panel.setBorder(BorderFactory.createTitledBorder("Товары в заказе"));
 
-		itemsTableModel = new OrderItemsTableModel();
-		itemsTable = new JTable(itemsTableModel);
-		itemsTable.setFont(new Font("Times New Roman", Font.PLAIN, 12));
-		itemsTable.setRowHeight(25);
-		itemsTable.getTableHeader().setFont(new Font("Times New Roman", Font.BOLD, 12));
-		itemsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
 		JScrollPane scrollPane = new JScrollPane(itemsTable);
 		scrollPane.setPreferredSize(new Dimension(panel.getWidth(), 180));
 		panel.add(scrollPane, BorderLayout.CENTER);
@@ -228,328 +172,128 @@ public class OrderFormFrame extends JFrame {
 		return panel;
 	}
 
-	private JPanel createButtonPanel() {
-		JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-		panel.setBackground(Color.WHITE);
-
+	private JButton createSaveButton() {
 		JButton saveButton = new JButton(isEditMode ? "Сохранить изменения" : "Добавить заказ");
 		saveButton.setBackground(Color.decode("#00FA9A"));
 		saveButton.setFont(new Font("Times New Roman", Font.BOLD, 12));
 		saveButton.addActionListener(e -> saveOrder());
+		return saveButton;
+	}
 
+	private JButton createCancelButton() {
 		JButton cancelButton = new JButton("Отмена");
 		cancelButton.setBackground(Color.decode("#FFA07A"));
 		cancelButton.addActionListener(e -> dispose());
-
-		panel.add(saveButton);
-		panel.add(cancelButton);
-
-		return panel;
+		return cancelButton;
 	}
 
-	private void loadUsers() {
-		List<User> allUsers = userService.getAllUsers();
-		// Показываем всех пользователей (можно отфильтровать по роли "Авторизированный
-		// клиент")
-		for (User user : allUsers) {
-			userCombo.addItem(user);
-		}
+	private void setupComponents() {
+		OrderItemsTableModel itemsTableModel = new OrderItemsTableModel(new ArrayList<>());
+		itemsTable = new JTable(itemsTableModel);
+		setupTable();
+
+		itemManager = new OrderItemManager(this, itemsTable, itemsTableModel);
+		validator = new OrderFormValidator(this, userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
+				deliveryDateSpinner);
+		dataLoader = new OrderFormDataLoader(orderService, productService, userService);
 	}
 
-	private void loadStatuses() {
-		List<OrderStatus> statuses = orderService.getAllStatuses();
-		for (OrderStatus status : statuses) {
-			statusCombo.addItem(status);
-		}
+	private void setupTable() {
+		itemsTable.setFont(new Font("Times New Roman", Font.PLAIN, 12));
+		itemsTable.setRowHeight(25);
+		itemsTable.getTableHeader().setFont(new Font("Times New Roman", Font.BOLD, 12));
+		itemsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 	}
 
-	private void loadPickupPoints() {
-		List<PickupPoint> points = orderService.getAllPickupPoints();
-		for (PickupPoint point : points) {
-			pickupPointCombo.addItem(point);
-		}
-	}
+	private void loadData() {
+		dataLoader.loadUsers(userCombo);
+		dataLoader.loadStatuses(statusCombo);
+		dataLoader.loadPickupPoints(pickupPointCombo);
+		dataLoader.loadProducts(productCombo);
 
-	private void loadProducts() {
-		List<Product> products = productService.getAllProducts();
-		for (Product product : products) {
-			productCombo.addItem(product);
-		}
-	}
-
-	private boolean canAddQuantity(Product product, int additionalQuantity) {
-		int currentInOrder = orderItems.stream()
-				.filter(item -> item.getProduct().getArticle().equals(product.getArticle()))
-				.mapToInt(OrderItem::getQuantity).sum();
-
-		int totalAfterAdd = currentInOrder + additionalQuantity;
-		int availableInStock = product.getQuantity() != null ? product.getQuantity() : 0;
-
-		if (totalAfterAdd > availableInStock) {
-			JOptionPane.showMessageDialog(this,
-					String.format("""
-							Недостаточно товара на складе!
-
-							Товар: %s
-							Артикул: %s
-							Уже в заказе: %d шт.
-							Пытаетесь добавить: %d шт.
-							Всего будет: %d шт.
-							Доступно на складе: %d шт.""", product.getName(), product.getArticle(), currentInOrder,
-							additionalQuantity, totalAfterAdd, availableInStock),
-					"Ошибка добавления", JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
-		return true;
+		dataLoader.loadOrderData(editingOrder, userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
+				deliveryDateSpinner, pickupCodeField, itemManager);
 	}
 
 	private void addItemToOrder() {
 		Product selectedProduct = (Product) productCombo.getSelectedItem();
 		int quantity = (Integer) quantitySpinner.getValue();
 
-		if (selectedProduct == null) {
-			JOptionPane.showMessageDialog(this, "Выберите товар", "Ошибка", JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-
-		if (quantity <= 0) {
-			JOptionPane.showMessageDialog(this, "Количество должно быть больше 0", "Ошибка", JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-
-		if (!canAddQuantity(selectedProduct, quantity)) {
-			return;
-		}
-
-		Optional<OrderItem> existing = orderItems.stream()
-				.filter(item -> item.getProduct().getArticle().equals(selectedProduct.getArticle())).findFirst();
-
-		if (existing.isPresent()) {
-			existing.get().setQuantity(existing.get().getQuantity() + quantity);
-		} else {
-			OrderItem newItem = new OrderItem();
-			newItem.setProduct(selectedProduct);
-			newItem.setQuantity(quantity);
-			orderItems.add(newItem);
-		}
-
-		itemsTableModel.fireTableDataChanged();
-
-		productCombo.setSelectedIndex(0);
-		quantitySpinner.setValue(1);
-
-		JOptionPane.showMessageDialog(this, "Товар добавлен в заказ", "Успешно", JOptionPane.INFORMATION_MESSAGE);
-	}
-
-	private void removeSelectedItem() {
-		int selectedRow = itemsTable.getSelectedRow();
-		if (selectedRow >= 0 && selectedRow < orderItems.size()) {
-			orderItems.remove(selectedRow);
-			itemsTableModel.fireTableDataChanged();
-		} else {
-			JOptionPane.showMessageDialog(this, "Выберите товар для удаления", "Внимание", JOptionPane.WARNING_MESSAGE);
-		}
-	}
-
-	private void loadData() {
-		if (isEditMode && editingOrder != null) {
-			// Выбираем покупателя
-			if (editingOrder.getUser() != null) {
-				for (int i = 0; i < userCombo.getItemCount(); i++) {
-					User user = userCombo.getItemAt(i);
-					if (user != null && user.getId().equals(editingOrder.getUser().getId())) {
-						userCombo.setSelectedIndex(i);
-						break;
-					}
-				}
-			}
-
-			// Выбираем статус
-			if (editingOrder.getStatus() != null) {
-				for (int i = 0; i < statusCombo.getItemCount(); i++) {
-					OrderStatus status = statusCombo.getItemAt(i);
-					if (status != null && status.getId().equals(editingOrder.getStatus().getId())) {
-						statusCombo.setSelectedIndex(i);
-						break;
-					}
-				}
-			}
-
-			// Выбираем пункт выдачи
-			if (editingOrder.getPickupPoint() != null) {
-				for (int i = 0; i < pickupPointCombo.getItemCount(); i++) {
-					PickupPoint point = pickupPointCombo.getItemAt(i);
-					if (point != null && point.getId().equals(editingOrder.getPickupPoint().getId())) {
-						pickupPointCombo.setSelectedIndex(i);
-						break;
-					}
-				}
-			}
-
-			// Даты
-			if (editingOrder.getOrderDate() != null) {
-				Date date = Date.from(editingOrder.getOrderDate().atStartOfDay(ZoneId.systemDefault()).toInstant());
-				orderDateSpinner.setValue(date);
-			}
-			if (editingOrder.getDeliveryDate() != null) {
-				Date date = Date.from(editingOrder.getDeliveryDate().atStartOfDay(ZoneId.systemDefault()).toInstant());
-				deliveryDateSpinner.setValue(date);
-			}
-
-			// Код получения
-			if (editingOrder.getPickupCode() != null) {
-				pickupCodeField.setText(editingOrder.getPickupCode());
-			}
-
-			// Товары в заказе
-			if (editingOrder.getOrderItems() != null) {
-				orderItems = new ArrayList<>(editingOrder.getOrderItems());
-				itemsTableModel.fireTableDataChanged();
-			}
-		} else {
-			// Новый заказ
-			orderDateSpinner.setValue(new Date());
-			deliveryDateSpinner
-					.setValue(Date.from(LocalDate.now().plusDays(3).atStartOfDay(ZoneId.systemDefault()).toInstant()));
-			pickupCodeField.setText("(будет сгенерирован автоматически)");
+		if (itemManager.addItem(selectedProduct, quantity)) {
+			productCombo.setSelectedIndex(0);
+			quantitySpinner.setValue(1);
 		}
 	}
 
 	private void saveOrder() {
-		if (!validateForm()) {
+		if (!validator.validate()) {
 			return;
 		}
 
-		if (orderItems.isEmpty()) {
+		if (itemManager.isEmpty()) {
 			JOptionPane.showMessageDialog(this, "Добавьте хотя бы один товар в заказ", "Ошибка валидации",
 					JOptionPane.ERROR_MESSAGE);
 			return;
 		}
 
 		try {
-			Order order;
-
-			if (isEditMode) {
-				order = editingOrder;
-				// Очищаем старые товары
-				if (order.getOrderItems() != null) {
-					order.getOrderItems().clear();
-				} else {
-					order.setOrderItems(new ArrayList<>());
-				}
-				order.getOrderItems().addAll(orderItems);
-				for (OrderItem item : orderItems) {
-					item.setOrder(order);
-				}
-			} else {
-				order = new Order();
-				order.setUser((User) userCombo.getSelectedItem()); // Выбранный покупатель
-				order.setOrderItems(new ArrayList<>());
-				order.getOrderItems().addAll(orderItems);
-				for (OrderItem item : orderItems) {
-					item.setOrder(order);
-				}
-			}
-
-			order.setStatus((OrderStatus) statusCombo.getSelectedItem());
-			order.setPickupPoint((PickupPoint) pickupPointCombo.getSelectedItem());
-
-			Date orderDate = (Date) orderDateSpinner.getValue();
-			order.setOrderDate(orderDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-
-			Date deliveryDate = (Date) deliveryDateSpinner.getValue();
-			order.setDeliveryDate(deliveryDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+			Order order = buildOrder();
 
 			if (isEditMode) {
 				orderService.updateOrder(order);
-				JOptionPane.showMessageDialog(this, "Заказ успешно обновлён", "Успешно",
-						JOptionPane.INFORMATION_MESSAGE);
+				showSuccess("Заказ успешно обновлён");
 			} else {
-				// СОЗДАЕМ ЗАКАЗ
 				Order savedOrder = orderService.createOrder(order);
 				String code = orderService.generatePickupCode(savedOrder);
-				savedOrder.setPickupCode(code);
-
-				// ВАЖНО: Обновляем только код, НЕ вызываем updateOrder!
-				// Просто сохраняем заказ с кодом
 				orderService.updatePickupCode(savedOrder.getId(), code);
-
-				JOptionPane.showMessageDialog(this, "Заказ успешно добавлен\nКод получения: " + code, "Успешно",
-						JOptionPane.INFORMATION_MESSAGE);
+				showSuccess("Заказ успешно добавлен\nКод получения: " + code);
 			}
 
 			if (parentFrame != null) {
 				parentFrame.refreshOrders();
 			}
-
 			dispose();
 
 		} catch (Exception e) {
-			JOptionPane.showMessageDialog(this, "Ошибка при сохранении заказа: " + e.getMessage(), "Ошибка",
-					JOptionPane.ERROR_MESSAGE);
+			showError("Ошибка при сохранении заказа: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
 
-	private boolean validateForm() {
-		if (userCombo.getSelectedItem() == null) {
-			JOptionPane.showMessageDialog(this, "Выберите покупателя", "Ошибка валидации", JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
+	private Order buildOrder() {
+		Order order = isEditMode ? editingOrder : new Order();
 
-		if (statusCombo.getSelectedItem() == null) {
-			JOptionPane.showMessageDialog(this, "Выберите статус заказа", "Ошибка валидации",
-					JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
-
-		if (pickupPointCombo.getSelectedItem() == null) {
-			JOptionPane.showMessageDialog(this, "Выберите адрес пункта выдачи", "Ошибка валидации",
-					JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
+		order.setUser((User) userCombo.getSelectedItem());
+		order.setStatus((OrderStatus) statusCombo.getSelectedItem());
+		order.setPickupPoint((PickupPoint) pickupPointCombo.getSelectedItem());
 
 		Date orderDate = (Date) orderDateSpinner.getValue();
-		Date deliveryDate = (Date) deliveryDateSpinner.getValue();
+		order.setOrderDate(orderDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
 
-		if (deliveryDate.before(orderDate)) {
-			JOptionPane.showMessageDialog(this, "Дата выдачи не может быть раньше даты заказа", "Ошибка валидации",
-					JOptionPane.ERROR_MESSAGE);
-			return false;
+		Date deliveryDate = (Date) deliveryDateSpinner.getValue();
+		order.setDeliveryDate(deliveryDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+
+		// Обработка товаров
+		if (isEditMode && order.getOrderItems() != null) {
+			order.getOrderItems().clear();
+		} else {
+			order.setOrderItems(new ArrayList<>());
 		}
 
-		return true;
+		order.getOrderItems().addAll(itemManager.getOrderItems());
+		for (OrderItem item : itemManager.getOrderItems()) {
+			item.setOrder(order);
+		}
+
+		return order;
 	}
 
-	// Модель таблицы товаров
-	private class OrderItemsTableModel extends AbstractTableModel {
-		private final String[] columns = {"Артикул", "Наименование товара", "Количество"};
+	private void showSuccess(String message) {
+		JOptionPane.showMessageDialog(this, message, "Успешно", JOptionPane.INFORMATION_MESSAGE);
+	}
 
-		@Override
-		public int getRowCount() {
-			return orderItems.size();
-		}
-
-		@Override
-		public int getColumnCount() {
-			return columns.length;
-		}
-
-		@Override
-		public String getColumnName(int column) {
-			return columns[column];
-		}
-
-		@Override
-		public Object getValueAt(int row, int column) {
-			OrderItem item = orderItems.get(row);
-			return switch (column) {
-				case 0 -> item.getProduct().getArticle();
-				case 1 -> item.getProduct().getName();
-				case 2 -> item.getQuantity();
-				default -> null;
-			};
-		}
+	private void showError(String message) {
+		JOptionPane.showMessageDialog(this, message, "Ошибка", JOptionPane.ERROR_MESSAGE);
 	}
 
 	// Рендереры
@@ -558,8 +302,8 @@ public class OrderFormFrame extends JFrame {
 		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
 				boolean cellHasFocus) {
 			super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-			if (value instanceof User) {
-				setText(((User) value).getFullName() + " (" + ((User) value).getLogin() + ")");
+			if (value instanceof User user) {
+				setText(user.getFullName() + " (" + user.getLogin() + ")");
 			}
 			return this;
 		}
