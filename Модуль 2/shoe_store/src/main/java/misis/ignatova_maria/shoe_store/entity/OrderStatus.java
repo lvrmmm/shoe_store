@@ -12,11 +12,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class OrderStatus {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "status_id")
-    private Integer id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "status_id")
+	private Integer id;
 
-    @Column(name = "status_name", length = 50, nullable = false, unique = true)
-    private String name;
+	@Column(name = "status_name", length = 50, nullable = false, unique = true)
+	private String name;
 }

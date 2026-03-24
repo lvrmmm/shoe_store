@@ -12,23 +12,23 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PickupPoint {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "point_id")
-    private Integer id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "point_id")
+	private Integer id;
 
-    @Column(name = "postal_code", length = 10, nullable = false)
-    private String postalCode;
+	@Column(name = "postal_code", length = 10, nullable = false)
+	private String postalCode;
 
-    @Column(name = "city", length = 100, nullable = false)
-    private String city;
+	@Column(name = "city", length = 100, nullable = false)
+	private String city;
 
-    @Column(name = "street", length = 255, nullable = false)
-    private String street;
+	@Column(name = "street", length = 254, nullable = false)
+	private String street;
 
-    @Column(name = "house_number", length = 20, nullable = false)
-    private String houseNumber;
+	@Column(name = "house_number", length = 20, nullable = false)
+	private String houseNumber;
 
-    @Column(name = "full_address", columnDefinition = "TEXT", unique = true)
-    private String fullAddress;
+	@Column(name = "full_address", columnDefinition = "TEXT", unique = true)
+	private String fullAddress;
 }

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+
+    <!-- Длина строки -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+    </module>
+
+    <!-- Нет пробелов в конце строк -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing spaces."/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- CamelCase -->
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+
+        <!-- Отступы 4 пробела -->
+        <module name="Indentation">
+            <property name="basicOffset" value="4"/>
+        </module>
+
+        <!-- Одна команда в строке -->
+        <module name="OneStatementPerLine"/>
+
+        <!-- Фигурные скобки -->
+        <module name="NeedBraces"/>
+
+        <!-- Импорты -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+    </module>
+</module>
