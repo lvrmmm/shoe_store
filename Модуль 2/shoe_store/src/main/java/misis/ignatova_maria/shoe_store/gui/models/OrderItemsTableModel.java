@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui.model;
+package misis.ignatova_maria.shoe_store.gui.models;
 
 import java.util.List;
 

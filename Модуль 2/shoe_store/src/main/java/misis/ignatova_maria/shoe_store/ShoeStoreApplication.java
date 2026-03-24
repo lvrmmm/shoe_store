@@ -7,7 +7,7 @@ import javax.swing.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
-import misis.ignatova_maria.shoe_store.gui.LoginFrame;
+import misis.ignatova_maria.shoe_store.gui.frames.LoginFrame;
 import misis.ignatova_maria.shoe_store.util.ImageLoader;
 
 @SpringBootApplication

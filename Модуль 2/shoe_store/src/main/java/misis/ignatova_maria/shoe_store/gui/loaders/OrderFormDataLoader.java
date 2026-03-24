@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.loaders;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -9,6 +9,7 @@ import java.util.function.Function;
 import javax.swing.*;
 
 import misis.ignatova_maria.shoe_store.entity.*;
+import misis.ignatova_maria.shoe_store.gui.managers.OrderItemManager;
 import misis.ignatova_maria.shoe_store.service.OrderService;
 import misis.ignatova_maria.shoe_store.service.ProductService;
 import misis.ignatova_maria.shoe_store.service.UserService;

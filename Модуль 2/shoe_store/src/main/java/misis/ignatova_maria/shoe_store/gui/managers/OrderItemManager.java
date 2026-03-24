@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.managers;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ import javax.swing.*;
 import lombok.Getter;
 import misis.ignatova_maria.shoe_store.entity.OrderItem;
 import misis.ignatova_maria.shoe_store.entity.Product;
-import misis.ignatova_maria.shoe_store.gui.model.OrderItemsTableModel;
+import misis.ignatova_maria.shoe_store.gui.models.OrderItemsTableModel;
 
 public class OrderItemManager {
 

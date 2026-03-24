@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.utils;
 
 import java.awt.*;
 

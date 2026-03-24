@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.frames;
 
 import java.awt.*;
 import java.math.BigDecimal;
@@ -7,6 +7,10 @@ import javax.swing.*;
 
 import lombok.Getter;
 import misis.ignatova_maria.shoe_store.entity.*;
+import misis.ignatova_maria.shoe_store.gui.builders.FormFieldBuilder;
+import misis.ignatova_maria.shoe_store.gui.loaders.EntityLoader;
+import misis.ignatova_maria.shoe_store.gui.utils.PhotoSelector;
+import misis.ignatova_maria.shoe_store.gui.validators.ProductFormValidator;
 import misis.ignatova_maria.shoe_store.service.ProductService;
 import misis.ignatova_maria.shoe_store.util.ImageLoader;
 import misis.ignatova_maria.shoe_store.util.SpringContext;

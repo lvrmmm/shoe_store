@@ -1,13 +1,15 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.contexts;
 
 import java.awt.Color;
 
+import lombok.Getter;
 import misis.ignatova_maria.shoe_store.entity.Product;
 
 /**
  * Контекст для создания карточки товара Группирует все параметры для уменьшения
  * количества параметров в методах
  */
+@Getter
 public class ProductCardContext {
 	private final Product product;
 	private final boolean inStock;
@@ -25,22 +27,4 @@ public class ProductCardContext {
 		this.borderColor = Color.decode("#00FA9A");
 	}
 
-	public Product getProduct() {
-		return product;
-	}
-	public boolean isInStock() {
-		return inStock;
-	}
-	public double getDiscount() {
-		return discount;
-	}
-	public Color getBg() {
-		return bg;
-	}
-	public Color getTextColor() {
-		return textColor;
-	}
-	public Color getBorderColor() {
-		return borderColor;
-	}
 }

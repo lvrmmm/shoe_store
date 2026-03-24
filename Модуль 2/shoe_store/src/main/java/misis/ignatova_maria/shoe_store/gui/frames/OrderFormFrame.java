@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.frames;
 
 import java.awt.*;
 import java.time.ZoneId;
@@ -8,7 +8,11 @@ import java.util.Date;
 import javax.swing.*;
 
 import misis.ignatova_maria.shoe_store.entity.*;
-import misis.ignatova_maria.shoe_store.gui.model.OrderItemsTableModel;
+import misis.ignatova_maria.shoe_store.gui.builders.FormBuilder;
+import misis.ignatova_maria.shoe_store.gui.loaders.OrderFormDataLoader;
+import misis.ignatova_maria.shoe_store.gui.managers.OrderItemManager;
+import misis.ignatova_maria.shoe_store.gui.models.OrderItemsTableModel;
+import misis.ignatova_maria.shoe_store.gui.validators.OrderFormValidator;
 import misis.ignatova_maria.shoe_store.service.OrderService;
 import misis.ignatova_maria.shoe_store.service.ProductService;
 import misis.ignatova_maria.shoe_store.service.UserService;

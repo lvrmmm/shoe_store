@@ -1,4 +1,4 @@
-package misis.ignatova_maria.shoe_store.gui;
+package misis.ignatova_maria.shoe_store.gui.validators;
 
 import java.awt.Component;
 import java.util.Date;
