@@ -97,63 +97,78 @@ public class ProductService {
 	private String generateArticle() {
 		List<Product> allProducts = productRepository.findAllWithDetails();
 
-		String newArticle;
-		int maxAttempts = 100;
-		int attempts = 0;
-
-		while (attempts < maxAttempts) {
-			if (allProducts.isEmpty()) {
-				// Если товаров нет, начинаем с минимального значения
-				newArticle = "A100A0";
-			} else {
-				// Находим максимальный артикул (лексикографическая сортировка)
-				String maxArticle = allProducts.stream().map(Product::getArticle).max(String::compareTo)
-						.orElse("A100A0");
-
-				// Парсим артикул формата: буква + 3 цифры + буква + 1 цифра
-				// Пример: A112T4
-				char firstLetter = maxArticle.charAt(0); // A
-				int numberPart = Integer.parseInt(maxArticle.substring(1, 4)); // 112
-				char secondLetter = maxArticle.charAt(4); // T
-				int lastDigit = Character.getNumericValue(maxArticle.charAt(5)); // 4
-
-				// Увеличиваем последнюю цифру
-				lastDigit++;
-
-				// Обработка переполнения с каскадным увеличением
-				if (lastDigit > 9) {
-					lastDigit = 0;
-					numberPart++;
-
-					if (numberPart > 999) {
-						numberPart = 100;
-						secondLetter++;
-
-						if (secondLetter > 'Z') {
-							secondLetter = 'A';
-							firstLetter++;
-
-							// Если первая буква > Z — закончились комбинации
-							if (firstLetter > 'Z') {
-								throw new RuntimeException("Исчерпаны все возможные комбинации артикулов");
-							}
-						}
-					}
-				}
-
-				// Формируем новый артикул в том же формате
-				newArticle = String.format("%c%03d%c%d", firstLetter, numberPart, secondLetter, lastDigit);
-			}
-
-			// Проверяем уникальность в БД
-			if (!productRepository.existsByArticle(newArticle)) {
-				return newArticle;
-			}
-
-			attempts++;
+		if (allProducts.isEmpty()) {
+			return "A100A0";
 		}
 
-		throw new RuntimeException("Не удалось сгенерировать уникальный артикул после " + maxAttempts + " попыток");
+		String maxArticle = allProducts.stream().map(Product::getArticle).max(String::compareTo).orElse("A100A0");
+
+		return generateNextArticle(maxArticle);
+	}
+
+	private String generateNextArticle(String currentArticle) {
+		char firstLetter = currentArticle.charAt(0);
+		int numberPart = Integer.parseInt(currentArticle.substring(1, 4));
+		char secondLetter = currentArticle.charAt(4);
+		int lastDigit = Character.getNumericValue(currentArticle.charAt(5));
+
+		lastDigit++;
+
+		// Обработка переполнения
+		ArticleComponents components = handleOverflow(firstLetter, numberPart, secondLetter, lastDigit);
+
+		String newArticle = String.format("%c%03d%c%d", components.firstLetter, components.numberPart,
+				components.secondLetter, components.lastDigit);
+
+		// Проверка уникальности
+		if (productRepository.existsByArticle(newArticle)) {
+			return generateNextArticle(newArticle);
+		}
+
+		return newArticle;
+	}
+
+	private ArticleComponents handleOverflow(char firstLetter, int numberPart, char secondLetter, int lastDigit) {
+		if (lastDigit <= 9) {
+			return new ArticleComponents(firstLetter, numberPart, secondLetter, lastDigit);
+		}
+
+		lastDigit = 0;
+		numberPart++;
+
+		if (numberPart <= 999) {
+			return new ArticleComponents(firstLetter, numberPart, secondLetter, lastDigit);
+		}
+
+		numberPart = 100;
+		secondLetter++;
+
+		if (secondLetter <= 'Z') {
+			return new ArticleComponents(firstLetter, numberPart, secondLetter, lastDigit);
+		}
+
+		secondLetter = 'A';
+		firstLetter++;
+
+		if (firstLetter > 'Z') {
+			throw new RuntimeException("Исчерпаны все возможные комбинации артикулов");
+		}
+
+		return new ArticleComponents(firstLetter, numberPart, secondLetter, lastDigit);
+	}
+
+	private static class ArticleComponents {
+		char firstLetter;
+		int numberPart;
+		char secondLetter;
+		int lastDigit;
+
+		ArticleComponents(char firstLetter, int numberPart, char secondLetter, int lastDigit) {
+			this.firstLetter = firstLetter;
+			this.numberPart = numberPart;
+			this.secondLetter = secondLetter;
+			this.lastDigit = lastDigit;
+		}
 	}
 
 }

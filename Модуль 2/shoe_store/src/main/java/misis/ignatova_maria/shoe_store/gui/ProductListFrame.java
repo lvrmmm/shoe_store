@@ -5,6 +5,7 @@ import java.awt.event.MouseEvent;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -257,49 +258,80 @@ public class ProductListFrame extends JFrame {
 		if (allProducts == null)
 			return;
 
-		String searchText = searchField != null ? searchField.getText() : "";
-		String selectedSupplier = supplierFilterCombo != null
-				? (String) supplierFilterCombo.getSelectedItem()
-				: "Все поставщики";
-		String sortOption = sortCombo != null ? (String) sortCombo.getSelectedItem() : "Без сортировки";
+		String searchText = getSearchText();
+		String selectedSupplier = getSelectedSupplier();
+		String sortOption = getSortOption();
 
 		List<Product> filtered = allProducts;
-
-		if (searchText != null && !searchText.trim().isEmpty()) {
-			String lowerSearch = searchText.toLowerCase().trim();
-			filtered = filtered.stream()
-					.filter(p -> p.getArticle().toLowerCase().contains(lowerSearch)
-							|| p.getName().toLowerCase().contains(lowerSearch)
-							|| (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerSearch))
-							|| p.getCategory().getName().toLowerCase().contains(lowerSearch)
-							|| p.getManufacturer().getName().toLowerCase().contains(lowerSearch)
-							|| p.getSupplier().getName().toLowerCase().contains(lowerSearch))
-					.collect(Collectors.toList());
-		}
-
-		if (selectedSupplier != null && !selectedSupplier.equals("Все поставщики")) {
-			filtered = filtered.stream().filter(p -> p.getSupplier().getName().equals(selectedSupplier))
-					.collect(Collectors.toList());
-		}
-
-		if (sortOption != null) {
-			if (sortOption.equals("Количество (возрастание)")) {
-				filtered.sort((p1, p2) -> {
-					int q1 = p1.getQuantity() != null ? p1.getQuantity() : 0;
-					int q2 = p2.getQuantity() != null ? p2.getQuantity() : 0;
-					return Integer.compare(q1, q2);
-				});
-			} else if (sortOption.equals("Количество (убывание)")) {
-				filtered.sort((p1, p2) -> {
-					int q1 = p1.getQuantity() != null ? p1.getQuantity() : 0;
-					int q2 = p2.getQuantity() != null ? p2.getQuantity() : 0;
-					return Integer.compare(q2, q1);
-				});
-			}
-		}
+		filtered = applySearchFilter(filtered, searchText);
+		filtered = applySupplierFilter(filtered, selectedSupplier);
+		filtered = applySorting(filtered, sortOption);
 
 		filteredAndSearchedProducts = filtered;
 		refreshCardsDisplay();
+	}
+
+	private String getSearchText() {
+		return searchField != null ? searchField.getText() : "";
+	}
+
+	private String getSelectedSupplier() {
+		return supplierFilterCombo != null ? (String) supplierFilterCombo.getSelectedItem() : "Все поставщики";
+	}
+
+	private String getSortOption() {
+		return sortCombo != null ? (String) sortCombo.getSelectedItem() : "Без сортировки";
+	}
+
+	private List<Product> applySearchFilter(List<Product> products, String searchText) {
+		if (searchText == null || searchText.trim().isEmpty()) {
+			return products;
+		}
+		String lowerSearch = searchText.toLowerCase().trim();
+		return products.stream().filter(p -> matchesSearch(p, lowerSearch)).collect(Collectors.toList());
+	}
+
+	private List<Product> applySupplierFilter(List<Product> products, String selectedSupplier) {
+		if (selectedSupplier == null || selectedSupplier.equals("Все поставщики")) {
+			return products;
+		}
+		return products.stream().filter(p -> p.getSupplier().getName().equals(selectedSupplier))
+				.collect(Collectors.toList());
+	}
+
+	private List<Product> applySorting(List<Product> products, String sortOption) {
+		if (sortOption == null)
+			return products;
+
+		List<Product> sorted = new ArrayList<>(products);
+		if (sortOption.equals("Количество (возрастание)")) {
+			sorted.sort((p1, p2) -> Integer.compare(getQuantity(p1), getQuantity(p2)));
+		} else if (sortOption.equals("Количество (убывание)")) {
+			sorted.sort((p1, p2) -> Integer.compare(getQuantity(p2), getQuantity(p1)));
+		}
+		return sorted;
+	}
+
+	private boolean matchesSearch(Product p, String searchText) {
+		String lowerSearch = searchText.toLowerCase().trim();
+
+		return matchesField(p.getArticle(), lowerSearch) || matchesField(p.getName(), lowerSearch)
+				|| matchesDescription(p.getDescription(), lowerSearch)
+				|| matchesField(p.getCategory().getName(), lowerSearch)
+				|| matchesField(p.getManufacturer().getName(), lowerSearch)
+				|| matchesField(p.getSupplier().getName(), lowerSearch);
+	}
+
+	private boolean matchesField(String field, String searchText) {
+		return field != null && field.toLowerCase().contains(searchText);
+	}
+
+	private boolean matchesDescription(String description, String searchText) {
+		return description != null && description.toLowerCase().contains(searchText);
+	}
+
+	private int getQuantity(Product p) {
+		return p.getQuantity() != null ? p.getQuantity() : 0;
 	}
 
 	private void loadProducts() {
@@ -344,7 +376,6 @@ public class ProductListFrame extends JFrame {
 		boolean inStock = product.getQuantity() != null && product.getQuantity() > 0;
 		double discount = product.getDiscount() != null ? product.getDiscount().doubleValue() : 0;
 
-		// Фон карточки - ТОЛЬКО если скидка > 15%
 		Color bg = discount > 15 ? Color.decode("#2E8B57") : Color.WHITE;
 		Color textColor = (discount > 15 && inStock) ? Color.WHITE : Color.BLACK;
 		Color borderColor = Color.decode("#00FA9A");
@@ -354,20 +385,20 @@ public class ProductListFrame extends JFrame {
 		card.setBorder(BorderFactory.createLineBorder(borderColor, 2));
 		card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
-		// Двойной клик для редактирования (только для админа)
-		if (currentUser.isAdmin()) {
-			card.addMouseListener(new MouseAdapter() {
-				@Override
-				public void mouseClicked(MouseEvent e) {
-					if (e.getClickCount() == 2) {
-						openEditProductForm(product);
-					}
-				}
-			});
-			card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-		}
+		setupCardDoubleClick(card, product);
 
-		// ===== ЛЕВАЯ ЧАСТЬ - ФОТО (с рамкой) =====
+		JPanel photoPanel = createPhotoPanel(product, bg, borderColor);
+		JPanel infoPanel = createInfoPanel(product, bg, borderColor, textColor, inStock, discount);
+		JPanel rightPanel = createRightPanel(product, bg, borderColor, textColor, discount);
+
+		card.add(photoPanel, BorderLayout.WEST);
+		card.add(infoPanel, BorderLayout.CENTER);
+		card.add(rightPanel, BorderLayout.EAST);
+
+		return card;
+	}
+
+	private JPanel createPhotoPanel(Product product, Color bg, Color borderColor) {
 		JPanel photoPanel = new JPanel(new BorderLayout());
 		photoPanel.setBackground(bg);
 		photoPanel.setPreferredSize(new Dimension(150, 120));
@@ -380,16 +411,37 @@ public class ProductListFrame extends JFrame {
 		image.setIcon(ImageLoader.loadImage(product.getPhoto(), 120, 120));
 		photoPanel.add(image);
 
-		// ===== ЦЕНТРАЛЬНАЯ ЧАСТЬ - ОПИСАНИЕ (с рамкой) =====
+		return photoPanel;
+	}
+
+	private JPanel createInfoPanel(Product product, Color bg, Color borderColor, Color textColor, boolean inStock,
+			double discount) {
 		JPanel infoPanel = new JPanel();
 		infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
 		infoPanel.setBackground(bg);
 		infoPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
 				BorderFactory.createEmptyBorder(5, 10, 5, 10)));
 
-		// ===== ЗАГОЛОВОК + КНОПКА УДАЛИТЬ =====
+		JPanel headerPanel = createHeaderPanel(product, textColor);
+		infoPanel.add(headerPanel);
+		infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+
+		infoPanel.add(createInfoLabel("Описание: " + safe(product.getDescription()), textColor));
+		infoPanel.add(createInfoLabel("Производитель: " + product.getManufacturer().getName(), textColor));
+		infoPanel.add(createInfoLabel("Поставщик: " + product.getSupplier().getName(), textColor));
+
+		addPriceInfo(infoPanel, product, textColor, discount);
+
+		infoPanel.add(createInfoLabel("Ед. изм.: " + product.getUnit().getName(), textColor));
+
+		addQuantityInfo(infoPanel, product, bg, textColor, inStock);
+
+		return infoPanel;
+	}
+
+	private JPanel createHeaderPanel(Product product, Color textColor) {
 		JPanel headerPanel = new JPanel(new BorderLayout());
-		headerPanel.setBackground(bg);
+		headerPanel.setBackground(null);
 		headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 		headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -398,42 +450,42 @@ public class ProductListFrame extends JFrame {
 		title.setForeground(textColor);
 		headerPanel.add(title, BorderLayout.WEST);
 
-		// Кнопка "Удалить" (только для админа) - ЧЁРНЫЙ ТЕКСТ
 		if (currentUser.isAdmin()) {
-			JButton deleteButton = new JButton("Удалить");
-			deleteButton.setBackground(Color.decode("#FF6B6B"));
-			deleteButton.setForeground(Color.BLACK);
-			deleteButton.setFont(new Font("Times New Roman", Font.BOLD, 11));
-			deleteButton.setPreferredSize(new Dimension(75, 25));
-			deleteButton.setMaximumSize(new Dimension(75, 25));
-			deleteButton.setFocusPainted(false);
-			deleteButton.addActionListener(e -> {
-				if (ConfirmationDialog.confirmDelete(this, product.getName())) {
-					try {
-						productService.deleteProduct(product.getArticle());
-						refreshProducts();
-						JOptionPane.showMessageDialog(this, "Товар успешно удалён", "Успешно",
-								JOptionPane.INFORMATION_MESSAGE);
-					} catch (IllegalStateException ex) {
-						ConfirmationDialog.showDeleteError(this, product.getName());
-					} catch (Exception ex) {
-						JOptionPane.showMessageDialog(this, "Ошибка при удалении: " + ex.getMessage(), "Ошибка",
-								JOptionPane.ERROR_MESSAGE);
-					}
-				}
-			});
+			JButton deleteButton = createDeleteButton(product);
 			headerPanel.add(deleteButton, BorderLayout.EAST);
 		}
 
-		infoPanel.add(headerPanel);
-		infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+		return headerPanel;
+	}
 
-		// ===== ВСЕ СТРОКИ ОПИСАНИЯ (одинаковое выравнивание) =====
-		infoPanel.add(createInfoLabel("Описание: " + safe(product.getDescription()), textColor));
-		infoPanel.add(createInfoLabel("Производитель: " + product.getManufacturer().getName(), textColor));
-		infoPanel.add(createInfoLabel("Поставщик: " + product.getSupplier().getName(), textColor));
+	private JButton createDeleteButton(Product product) {
+		JButton deleteButton = new JButton("Удалить");
+		deleteButton.setBackground(Color.decode("#FF6B6B"));
+		deleteButton.setForeground(Color.BLACK);
+		deleteButton.setFont(new Font("Times New Roman", Font.BOLD, 11));
+		deleteButton.setPreferredSize(new Dimension(75, 25));
+		deleteButton.setMaximumSize(new Dimension(75, 25));
+		deleteButton.setFocusPainted(false);
+		deleteButton.addActionListener(e -> handleDelete(product));
+		return deleteButton;
+	}
 
-		// ===== ЦЕНА =====
+	private void handleDelete(Product product) {
+		if (ConfirmationDialog.confirmDelete(this, product.getName())) {
+			try {
+				productService.deleteProduct(product.getArticle());
+				refreshProducts();
+				JOptionPane.showMessageDialog(this, "Товар успешно удалён", "Успешно", JOptionPane.INFORMATION_MESSAGE);
+			} catch (IllegalStateException ex) {
+				ConfirmationDialog.showDeleteError(this, product.getName());
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(this, "Ошибка при удалении: " + ex.getMessage(), "Ошибка",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+
+	private void addPriceInfo(JPanel panel, Product product, Color textColor, double discount) {
 		if (discount > 0) {
 			BigDecimal finalPrice = product.getPrice().multiply(BigDecimal.valueOf(1 - discount / 100));
 			String priceHtml = "<html>Цена: <font color='red'><strike>" + priceFormat.format(product.getPrice())
@@ -444,14 +496,13 @@ public class ProductListFrame extends JFrame {
 			priceLabel.setForeground(textColor);
 			priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 			priceLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
-			infoPanel.add(priceLabel);
+			panel.add(priceLabel);
 		} else {
-			infoPanel.add(createInfoLabel("Цена: " + priceFormat.format(product.getPrice()) + " ₽", textColor));
+			panel.add(createInfoLabel("Цена: " + priceFormat.format(product.getPrice()) + " ₽", textColor));
 		}
+	}
 
-		infoPanel.add(createInfoLabel("Ед. изм.: " + product.getUnit().getName(), textColor));
-
-		// ===== КОЛИЧЕСТВО (ТОЛЬКО ЭТА СТРОКА ГОЛУБАЯ) =====
+	private void addQuantityInfo(JPanel panel, Product product, Color bg, Color textColor, boolean inStock) {
 		JPanel qtyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		qtyPanel.setBackground(bg);
 		qtyPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -469,49 +520,62 @@ public class ProductListFrame extends JFrame {
 		}
 
 		qtyPanel.add(qty);
-		infoPanel.add(qtyPanel);
+		panel.add(qtyPanel);
+	}
 
-		// ===== ПРАВАЯ ЧАСТЬ - СКИДКА =====
+	private JPanel createRightPanel(Product product, Color bg, Color borderColor, Color textColor, double discount) {
 		JPanel rightPanel = new JPanel(new BorderLayout());
 		rightPanel.setBackground(bg);
 		rightPanel.setPreferredSize(new Dimension(140, 140));
 		rightPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
 		if (discount > 0) {
-			JPanel discountPanel = new JPanel(new GridBagLayout());
-			discountPanel.setBackground(bg);
-			discountPanel.setPreferredSize(new Dimension(120, 80));
-			discountPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
-					BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-
-			GridBagConstraints gbc = new GridBagConstraints();
-			gbc.gridx = 0;
-			gbc.anchor = GridBagConstraints.CENTER;
-
-			JLabel discountTitle = new JLabel("Действующая скидка");
-			discountTitle.setFont(new Font("Times New Roman", Font.PLAIN, 10));
-			discountTitle.setForeground(textColor);
-			discountTitle.setHorizontalAlignment(SwingConstants.CENTER);
-
-			gbc.gridy = 0;
-			discountPanel.add(discountTitle, gbc);
-
-			JLabel discountLabel = new JLabel((int) discount + "%");
-			discountLabel.setFont(new Font("Times New Roman", Font.BOLD, 18));
-			discountLabel.setForeground(Color.RED);
-
-			gbc.gridy = 1;
-			discountPanel.add(discountLabel, gbc);
-
+			JPanel discountPanel = createDiscountPanel(bg, borderColor, textColor, discount);
 			rightPanel.add(discountPanel, BorderLayout.CENTER);
 		}
 
-		// ===== СБОРКА =====
-		card.add(photoPanel, BorderLayout.WEST);
-		card.add(infoPanel, BorderLayout.CENTER);
-		card.add(rightPanel, BorderLayout.EAST);
+		return rightPanel;
+	}
 
-		return card;
+	private JPanel createDiscountPanel(Color bg, Color borderColor, Color textColor, double discount) {
+		JPanel discountPanel = new JPanel(new GridBagLayout());
+		discountPanel.setBackground(bg);
+		discountPanel.setPreferredSize(new Dimension(120, 80));
+		discountPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(borderColor, 1),
+				BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.gridx = 0;
+		gbc.anchor = GridBagConstraints.CENTER;
+
+		JLabel discountTitle = new JLabel("Действующая скидка");
+		discountTitle.setFont(new Font("Times New Roman", Font.PLAIN, 10));
+		discountTitle.setForeground(textColor);
+		discountTitle.setHorizontalAlignment(SwingConstants.CENTER);
+		gbc.gridy = 0;
+		discountPanel.add(discountTitle, gbc);
+
+		JLabel discountLabel = new JLabel((int) discount + "%");
+		discountLabel.setFont(new Font("Times New Roman", Font.BOLD, 18));
+		discountLabel.setForeground(Color.RED);
+		gbc.gridy = 1;
+		discountPanel.add(discountLabel, gbc);
+
+		return discountPanel;
+	}
+
+	private void setupCardDoubleClick(JPanel card, Product product) {
+		if (currentUser.isAdmin()) {
+			card.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					if (e.getClickCount() == 2) {
+						openEditProductForm(product);
+					}
+				}
+			});
+			card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		}
 	}
 
 	// Вспомогательный метод - ВСЕГДА с LEFT_ALIGNMENT
