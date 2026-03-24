@@ -10,6 +10,7 @@ import javax.swing.*;
 import misis.ignatova_maria.shoe_store.entity.*;
 import misis.ignatova_maria.shoe_store.gui.builders.FormBuilder;
 import misis.ignatova_maria.shoe_store.gui.contexts.OrderFormContext;
+import misis.ignatova_maria.shoe_store.gui.contexts.ValidatorContext;
 import misis.ignatova_maria.shoe_store.gui.loaders.OrderFormDataLoader;
 import misis.ignatova_maria.shoe_store.gui.managers.OrderItemManager;
 import misis.ignatova_maria.shoe_store.gui.models.OrderItemsTableModel;
@@ -205,8 +206,11 @@ public class OrderFormFrame extends JFrame {
 	}
 
 	private void initDependentComponents() {
-		validator = new OrderFormValidator(this, userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
-				deliveryDateSpinner);
+		// Создаем контекст для валидатора
+		ValidatorContext validatorContext = new ValidatorContext(userCombo, statusCombo, pickupPointCombo,
+				orderDateSpinner, deliveryDateSpinner);
+
+		validator = new OrderFormValidator(this, validatorContext);
 		dataLoader = new OrderFormDataLoader(orderService, productService, userService);
 	}
 

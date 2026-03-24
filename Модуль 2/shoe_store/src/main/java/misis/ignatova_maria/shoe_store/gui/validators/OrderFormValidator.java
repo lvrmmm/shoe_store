@@ -1,71 +1,88 @@
 package misis.ignatova_maria.shoe_store.gui.validators;
 
 import java.awt.Component;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.swing.*;
+
+import misis.ignatova_maria.shoe_store.gui.contexts.ValidatorContext;
 
 public class OrderFormValidator {
 
 	private final Component parent;
-	private final JComboBox<?> userCombo;
-	private final JComboBox<?> statusCombo;
-	private final JComboBox<?> pickupPointCombo;
-	private final JSpinner orderDateSpinner;
-	private final JSpinner deliveryDateSpinner;
+	private final ValidatorContext context;
 
-	public OrderFormValidator(Component parent, JComboBox<?> userCombo, JComboBox<?> statusCombo,
-			JComboBox<?> pickupPointCombo, JSpinner orderDateSpinner, JSpinner deliveryDateSpinner) {
+	public OrderFormValidator(Component parent, ValidatorContext context) {
 		this.parent = parent;
-		this.userCombo = userCombo;
-		this.statusCombo = statusCombo;
-		this.pickupPointCombo = pickupPointCombo;
-		this.orderDateSpinner = orderDateSpinner;
-		this.deliveryDateSpinner = deliveryDateSpinner;
+		this.context = context;
 	}
 
 	public boolean validate() {
-		if (userCombo == null) {
-			showError("Ошибка инициализации формы: не найден список покупателей");
-			return false;
-		}
-		if (userCombo.getSelectedItem() == null) {
-			showError("Выберите покупателя");
-			return false;
-		}
+		List<String> errors = new ArrayList<>();
 
-		if (statusCombo == null) {
-			showError("Ошибка инициализации формы: не найден список статусов");
-			return false;
-		}
-		if (statusCombo.getSelectedItem() == null) {
-			showError("Выберите статус заказа");
-			return false;
-		}
+		validateUserCombo(errors);
+		validateStatusCombo(errors);
+		validatePickupPointCombo(errors);
+		validateDateSpinners(errors);
+		validateDeliveryDate(errors);
 
-		if (pickupPointCombo == null) {
-			showError("Ошибка инициализации формы: не найден список пунктов выдачи");
-			return false;
-		}
-		if (pickupPointCombo.getSelectedItem() == null) {
-			showError("Выберите адрес пункта выдачи");
-			return false;
-		}
-
-		if (orderDateSpinner == null || deliveryDateSpinner == null) {
-			showError("Ошибка инициализации формы: не найдены даты");
-			return false;
-		}
-
-		Date orderDate = (Date) orderDateSpinner.getValue();
-		Date deliveryDate = (Date) deliveryDateSpinner.getValue();
-
-		if (deliveryDate.before(orderDate)) {
-			showError("Дата выдачи не может быть раньше даты заказа");
+		if (!errors.isEmpty()) {
+			showError(errors.get(0));
 			return false;
 		}
 
 		return true;
+	}
+
+	private void validateUserCombo(List<String> errors) {
+		JComboBox<?> userCombo = context.getUserCombo();
+		if (userCombo == null) {
+			errors.add("Ошибка инициализации формы: не найден список покупателей");
+		} else if (userCombo.getSelectedItem() == null) {
+			errors.add("Выберите покупателя");
+		}
+	}
+
+	private void validateStatusCombo(List<String> errors) {
+		JComboBox<?> statusCombo = context.getStatusCombo();
+		if (statusCombo == null) {
+			errors.add("Ошибка инициализации формы: не найден список статусов");
+		} else if (statusCombo.getSelectedItem() == null) {
+			errors.add("Выберите статус заказа");
+		}
+	}
+
+	private void validatePickupPointCombo(List<String> errors) {
+		JComboBox<?> pickupPointCombo = context.getPickupPointCombo();
+		if (pickupPointCombo == null) {
+			errors.add("Ошибка инициализации формы: не найден список пунктов выдачи");
+		} else if (pickupPointCombo.getSelectedItem() == null) {
+			errors.add("Выберите адрес пункта выдачи");
+		}
+	}
+
+	private void validateDateSpinners(List<String> errors) {
+		JSpinner orderDateSpinner = context.getOrderDateSpinner();
+		JSpinner deliveryDateSpinner = context.getDeliveryDateSpinner();
+		if (orderDateSpinner == null || deliveryDateSpinner == null) {
+			errors.add("Ошибка инициализации формы: не найдены даты");
+		}
+	}
+
+	private void validateDeliveryDate(List<String> errors) {
+		JSpinner orderDateSpinner = context.getOrderDateSpinner();
+		JSpinner deliveryDateSpinner = context.getDeliveryDateSpinner();
+
+		if (orderDateSpinner != null && deliveryDateSpinner != null) {
+			Date orderDate = (Date) orderDateSpinner.getValue();
+			Date deliveryDate = (Date) deliveryDateSpinner.getValue();
+
+			if (deliveryDate != null && orderDate != null && deliveryDate.before(orderDate)) {
+				errors.add("Дата выдачи не может быть раньше даты заказа");
+			}
+		}
 	}
 
 	private void showError(String message) {
