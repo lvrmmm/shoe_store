@@ -17,7 +17,7 @@ public class ProductFilterPanel extends JPanel {
 	private JComboBox<String> supplierFilterCombo;
 	private JComboBox<String> sortCombo;
 	@Setter
-    private Consumer<Void> onFilterChanged;
+	private Consumer<Void> onFilterChanged;
 
 	public ProductFilterPanel() {
 		initUI();
@@ -66,7 +66,7 @@ public class ProductFilterPanel extends JPanel {
 		sortCombo.addActionListener(e -> notifyFilterChanged());
 	}
 
-    private void notifyFilterChanged() {
+	private void notifyFilterChanged() {
 		if (onFilterChanged != null) {
 			onFilterChanged.accept(null);
 		}

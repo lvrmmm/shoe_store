@@ -25,18 +25,35 @@ public class OrderFormValidator {
 	}
 
 	public boolean validate() {
+		if (userCombo == null) {
+			showError("Ошибка инициализации формы: не найден список покупателей");
+			return false;
+		}
 		if (userCombo.getSelectedItem() == null) {
 			showError("Выберите покупателя");
 			return false;
 		}
 
+		if (statusCombo == null) {
+			showError("Ошибка инициализации формы: не найден список статусов");
+			return false;
+		}
 		if (statusCombo.getSelectedItem() == null) {
 			showError("Выберите статус заказа");
 			return false;
 		}
 
+		if (pickupPointCombo == null) {
+			showError("Ошибка инициализации формы: не найден список пунктов выдачи");
+			return false;
+		}
 		if (pickupPointCombo.getSelectedItem() == null) {
 			showError("Выберите адрес пункта выдачи");
+			return false;
+		}
+
+		if (orderDateSpinner == null || deliveryDateSpinner == null) {
+			showError("Ошибка инициализации формы: не найдены даты");
 			return false;
 		}
 

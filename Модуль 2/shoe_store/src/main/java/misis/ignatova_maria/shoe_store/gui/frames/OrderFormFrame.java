@@ -9,6 +9,7 @@ import javax.swing.*;
 
 import misis.ignatova_maria.shoe_store.entity.*;
 import misis.ignatova_maria.shoe_store.gui.builders.FormBuilder;
+import misis.ignatova_maria.shoe_store.gui.contexts.OrderFormContext;
 import misis.ignatova_maria.shoe_store.gui.loaders.OrderFormDataLoader;
 import misis.ignatova_maria.shoe_store.gui.managers.OrderItemManager;
 import misis.ignatova_maria.shoe_store.gui.models.OrderItemsTableModel;
@@ -28,7 +29,6 @@ public class OrderFormFrame extends JFrame {
 	private final Order editingOrder;
 	private final boolean isEditMode;
 
-	// Основные поля
 	private JComboBox<User> userCombo;
 	private JComboBox<OrderStatus> statusCombo;
 	private JComboBox<PickupPoint> pickupPointCombo;
@@ -36,15 +36,14 @@ public class OrderFormFrame extends JFrame {
 	private JSpinner deliveryDateSpinner;
 	private JTextField pickupCodeField;
 
-	// Таблица товаров
 	private JTable itemsTable;
+	private OrderItemsTableModel itemsTableModel;
 	private OrderItemManager itemManager;
+	private JLabel itemsCountLabel;
 
-	// Добавление товара
 	private JComboBox<Product> productCombo;
 	private JSpinner quantitySpinner;
 
-	// Валидатор и загрузчик
 	private OrderFormValidator validator;
 	private OrderFormDataLoader dataLoader;
 
@@ -56,9 +55,11 @@ public class OrderFormFrame extends JFrame {
 		this.editingOrder = orderToEdit;
 		this.isEditMode = (orderToEdit != null);
 
-		initUI();
 		setupComponents();
+		initUI();
+		initDependentComponents();
 		loadData();
+
 		setLocationRelativeTo(parent);
 	}
 
@@ -74,7 +75,6 @@ public class OrderFormFrame extends JFrame {
 		mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 		mainPanel.setBackground(Color.WHITE);
 
-		// Используем FormBuilder для создания панелей
 		JPanel formPanel = createFormPanel();
 		JPanel addItemPanel = createAddItemPanel();
 		JPanel itemsPanel = createItemsPanel();
@@ -92,7 +92,6 @@ public class OrderFormFrame extends JFrame {
 	}
 
 	private JPanel createFormPanel() {
-		// Используем FormBuilder для создания панели с заголовком
 		JPanel panel = FormBuilder.createFormPanel("Информация о заказе");
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.insets = new Insets(5, 10, 5, 10);
@@ -101,30 +100,24 @@ public class OrderFormFrame extends JFrame {
 
 		int row = 0;
 
-		// Покупатель
 		userCombo = new JComboBox<>();
 		userCombo.setRenderer(new UserListCellRenderer());
 		FormBuilder.addField(panel, gbc, "Покупатель:*", userCombo, row++);
 
-		// Статус заказа
 		statusCombo = new JComboBox<>();
 		statusCombo.setRenderer(new StatusListCellRenderer());
 		FormBuilder.addField(panel, gbc, "Статус заказа:*", statusCombo, row++);
 
-		// Пункт выдачи
 		pickupPointCombo = new JComboBox<>();
 		pickupPointCombo.setRenderer(new PickupPointListCellRenderer());
 		FormBuilder.addField(panel, gbc, "Адрес пункта выдачи:*", pickupPointCombo, row++);
 
-		// Дата заказа
 		orderDateSpinner = FormBuilder.createDateSpinner();
 		FormBuilder.addField(panel, gbc, "Дата заказа:*", orderDateSpinner, row++);
 
-		// Дата выдачи
 		deliveryDateSpinner = FormBuilder.createDateSpinner();
 		FormBuilder.addField(panel, gbc, "Дата выдачи:*", deliveryDateSpinner, row++);
 
-		// Код получения
 		pickupCodeField = new JTextField(20);
 		pickupCodeField.setEditable(false);
 		pickupCodeField.setBackground(Color.LIGHT_GRAY);
@@ -171,7 +164,14 @@ public class OrderFormFrame extends JFrame {
 
 		JScrollPane scrollPane = new JScrollPane(itemsTable);
 		scrollPane.setPreferredSize(new Dimension(panel.getWidth(), 180));
+		scrollPane.setMinimumSize(new Dimension(panel.getWidth(), 150));
 		panel.add(scrollPane, BorderLayout.CENTER);
+
+		JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		infoPanel.setBackground(panel.getBackground());
+		itemsCountLabel = new JLabel("Всего товаров: 0 шт.");
+		infoPanel.add(itemsCountLabel);
+		panel.add(infoPanel, BorderLayout.SOUTH);
 
 		return panel;
 	}
@@ -192,11 +192,19 @@ public class OrderFormFrame extends JFrame {
 	}
 
 	private void setupComponents() {
-		OrderItemsTableModel itemsTableModel = new OrderItemsTableModel(new ArrayList<>());
+		itemsTableModel = new OrderItemsTableModel(new ArrayList<>());
 		itemsTable = new JTable(itemsTableModel);
 		setupTable();
 
+		itemsTableModel.setDataChangeListener(this::updateItemsCountLabel);
+		itemsTable.setPreferredScrollableViewportSize(new Dimension(850, 150));
+		itemsTable.setFillsViewportHeight(true);
+
 		itemManager = new OrderItemManager(this, itemsTable, itemsTableModel);
+		itemsTable.setVisible(true);
+	}
+
+	private void initDependentComponents() {
 		validator = new OrderFormValidator(this, userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
 				deliveryDateSpinner);
 		dataLoader = new OrderFormDataLoader(orderService, productService, userService);
@@ -207,6 +215,24 @@ public class OrderFormFrame extends JFrame {
 		itemsTable.setRowHeight(25);
 		itemsTable.getTableHeader().setFont(new Font("Times New Roman", Font.BOLD, 12));
 		itemsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		itemsTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+		if (itemsTable.getColumnCount() > 0) {
+			itemsTable.getColumnModel().getColumn(0).setPreferredWidth(100);
+		}
+		if (itemsTable.getColumnCount() > 1) {
+			itemsTable.getColumnModel().getColumn(1).setPreferredWidth(300);
+		}
+		if (itemsTable.getColumnCount() > 2) {
+			itemsTable.getColumnModel().getColumn(2).setPreferredWidth(80);
+		}
+	}
+
+	private void updateItemsCountLabel() {
+		if (itemsCountLabel != null && itemManager != null) {
+			int totalQuantity = itemManager.getOrderItems().stream().mapToInt(OrderItem::getQuantity).sum();
+			itemsCountLabel.setText("Всего товаров: " + totalQuantity + " шт.");
+		}
 	}
 
 	private void loadData() {
@@ -215,8 +241,20 @@ public class OrderFormFrame extends JFrame {
 		dataLoader.loadPickupPoints(pickupPointCombo);
 		dataLoader.loadProducts(productCombo);
 
-		dataLoader.loadOrderData(editingOrder, userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
+		OrderFormContext context = new OrderFormContext(userCombo, statusCombo, pickupPointCombo, orderDateSpinner,
 				deliveryDateSpinner, pickupCodeField, itemManager);
+
+		dataLoader.loadOrderData(editingOrder, context);
+
+		SwingUtilities.invokeLater(() -> {
+			if (itemsTable != null && itemsTableModel != null) {
+				itemsTable.setModel(itemsTableModel);
+				itemsTable.createDefaultColumnsFromModel();
+				updateItemsCountLabel();
+				itemsTable.revalidate();
+				itemsTable.repaint();
+			}
+		});
 	}
 
 	private void addItemToOrder() {
@@ -226,6 +264,7 @@ public class OrderFormFrame extends JFrame {
 		if (itemManager.addItem(selectedProduct, quantity)) {
 			productCombo.setSelectedIndex(0);
 			quantitySpinner.setValue(1);
+			updateItemsCountLabel();
 		}
 	}
 
@@ -277,7 +316,6 @@ public class OrderFormFrame extends JFrame {
 		Date deliveryDate = (Date) deliveryDateSpinner.getValue();
 		order.setDeliveryDate(deliveryDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
 
-		// Обработка товаров
 		if (isEditMode && order.getOrderItems() != null) {
 			order.getOrderItems().clear();
 		} else {
@@ -300,7 +338,6 @@ public class OrderFormFrame extends JFrame {
 		JOptionPane.showMessageDialog(this, message, "Ошибка", JOptionPane.ERROR_MESSAGE);
 	}
 
-	// Рендереры
 	private static class UserListCellRenderer extends DefaultListCellRenderer {
 		@Override
 		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,

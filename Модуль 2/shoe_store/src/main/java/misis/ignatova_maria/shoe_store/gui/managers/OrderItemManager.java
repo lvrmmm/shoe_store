@@ -33,6 +33,11 @@ public class OrderItemManager {
 			orderItems.addAll(items);
 		}
 		tableModel.setOrderItems(orderItems);
+
+		SwingUtilities.invokeLater(() -> {
+			itemsTable.revalidate();
+			itemsTable.repaint();
+		});
 	}
 
 	public boolean canAddQuantity(Product product, int additionalQuantity) {
@@ -85,7 +90,8 @@ public class OrderItemManager {
 				.filter(item -> item.getProduct().getArticle().equals(product.getArticle())).findFirst();
 
 		if (existing.isPresent()) {
-			existing.get().setQuantity(existing.get().getQuantity() + quantity);
+			OrderItem item = existing.get();
+			item.setQuantity(item.getQuantity() + quantity);
 		} else {
 			OrderItem newItem = new OrderItem();
 			newItem.setProduct(product);

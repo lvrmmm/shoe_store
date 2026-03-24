@@ -42,6 +42,6 @@ public class Order {
 	@JoinColumn(name = "status_id", nullable = false)
 	private OrderStatus status;
 
-	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
 	private List<OrderItem> orderItems = new ArrayList<>();
 }

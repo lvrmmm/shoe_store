@@ -20,20 +20,20 @@ public class ProductCardManager {
 
 	private final ProductService productService;
 	private final User currentUser;
-	private final ProductListFrame parentFrame; // <-- ИЗМЕНИТЕ ТИП С JFrame НА ProductListFrame
+	private final ProductListFrame parentFrame;
 	private final DecimalFormat priceFormat;
 	@Setter
-    private Runnable onRefreshCallback;
+	private Runnable onRefreshCallback;
 
 	public ProductCardManager(ProductService productService, User currentUser, ProductListFrame parentFrame,
-			DecimalFormat priceFormat) { // <-- ИЗМЕНИТЕ ТИП
+			DecimalFormat priceFormat) {
 		this.productService = productService;
 		this.currentUser = currentUser;
 		this.parentFrame = parentFrame;
 		this.priceFormat = priceFormat;
 	}
 
-    public JPanel createProductCard(Product product) {
+	public JPanel createProductCard(Product product) {
 		ProductCardContext ctx = new ProductCardContext(product);
 
 		JPanel card = new JPanel(new BorderLayout(15, 10));

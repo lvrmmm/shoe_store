@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,20 +61,16 @@ public class OrderService {
 			order.setStatus(getDefaultStatus());
 		}
 
-		// Убеждаемся, что ID = null для авто-генерации
 		order.setId(null);
 
-		// Убеждаемся, что пользователь загружен из БД
 		if (order.getUser() != null && order.getUser().getId() != null) {
 			User existingUser = userRepository.findById(order.getUser().getId())
 					.orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 			order.setUser(existingUser);
 		}
 
-		// Сохраняем заказ
 		Order savedOrder = orderRepository.save(order);
 
-		// Сохраняем товары
 		if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
 			for (OrderItem item : order.getOrderItems()) {
 				item.setOrder(savedOrder);
@@ -86,37 +83,29 @@ public class OrderService {
 
 	@Transactional
 	public Order updateOrder(Order order) {
-		// Загружаем существующий заказ из БД
 		Order existingOrder = orderRepository.findById(order.getId())
 				.orElseThrow(() -> new RuntimeException("Заказ не найден"));
 
-		// Обновляем основные поля
 		existingOrder.setOrderDate(order.getOrderDate());
 		existingOrder.setDeliveryDate(order.getDeliveryDate());
 		existingOrder.setPickupPoint(order.getPickupPoint());
 		existingOrder.setStatus(order.getStatus());
 		existingOrder.setPickupCode(order.getPickupCode());
 
-		// Обновляем пользователя (если изменился)
 		if (order.getUser() != null && order.getUser().getId() != null) {
 			User existingUser = userRepository.findById(order.getUser().getId())
 					.orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 			existingOrder.setUser(existingUser);
 		}
 
-		// ВАЖНО: Удаляем все старые товары с принудительным сбросом
 		if (existingOrder.getOrderItems() != null && !existingOrder.getOrderItems().isEmpty()) {
-			// Сначала удаляем все старые товары
 			for (OrderItem item : existingOrder.getOrderItems()) {
 				orderItemRepository.delete(item);
 			}
-			// Очищаем коллекцию
 			existingOrder.getOrderItems().clear();
-			// Принудительно выполняем удаление в БД
 			orderItemRepository.flush();
 		}
 
-		// Добавляем новые товары
 		if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
 			for (OrderItem item : order.getOrderItems()) {
 				OrderItem newItem = new OrderItem();
@@ -125,11 +114,9 @@ public class OrderService {
 				newItem.setQuantity(item.getQuantity());
 				existingOrder.getOrderItems().add(newItem);
 			}
-			// Сохраняем все новые товары
 			orderItemRepository.saveAll(existingOrder.getOrderItems());
 		}
 
-		// Сохраняем обновленный заказ
 		return orderRepository.save(existingOrder);
 	}
 
@@ -137,11 +124,9 @@ public class OrderService {
 	public boolean deleteOrder(Integer orderId) {
 		Optional<Order> order = orderRepository.findById(orderId);
 		if (order.isPresent()) {
-			// Удаляем связанные товары
 			if (order.get().getOrderItems() != null && !order.get().getOrderItems().isEmpty()) {
 				orderItemRepository.deleteAll(order.get().getOrderItems());
 			}
-			// Удаляем заказ
 			orderRepository.delete(order.get());
 			return true;
 		}
@@ -157,5 +142,13 @@ public class OrderService {
 
 	public String generatePickupCode(Order order) {
 		return String.format("%d-%04d", order.getId(), System.currentTimeMillis() % 10000);
+	}
+
+	public Order getOrderWithItems(Integer orderId) {
+		Order order = orderRepository.findById(orderId).orElse(null);
+		if (order != null) {
+			Hibernate.initialize(order.getOrderItems());
+		}
+		return order;
 	}
 }

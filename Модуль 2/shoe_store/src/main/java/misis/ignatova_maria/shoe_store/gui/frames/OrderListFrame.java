@@ -279,7 +279,6 @@ public class OrderListFrame extends JFrame {
 			card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		}
 
-		// Левая часть
 		JPanel leftPanel = new JPanel();
 		leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
 		leftPanel.setBackground(bgColor);
@@ -328,7 +327,6 @@ public class OrderListFrame extends JFrame {
 		orderDateValueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		leftPanel.add(orderDateValueLabel);
 
-		// Правая часть
 		JPanel rightPanel = new JPanel();
 		rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
 		rightPanel.setBackground(bgColor);
@@ -386,7 +384,7 @@ public class OrderListFrame extends JFrame {
 			@Override
 			public void windowClosed(java.awt.event.WindowEvent e) {
 				isEditFormOpen.set(false);
-				refreshOrders(); // Обновляем список после закрытия формы
+				refreshOrders();
 			}
 		});
 		isEditFormOpen.set(true);
@@ -401,16 +399,30 @@ public class OrderListFrame extends JFrame {
 			return;
 		}
 
-		OrderFormFrame form = new OrderFormFrame(this, order, currentUser);
-		form.addWindowListener(new java.awt.event.WindowAdapter() {
-			@Override
-			public void windowClosed(java.awt.event.WindowEvent e) {
-				isEditFormOpen.set(false);
-				refreshOrders(); // Обновляем список после закрытия формы
+		try {
+			Order orderWithItems = orderService.getOrderWithItems(order.getId());
+
+			if (orderWithItems == null) {
+				JOptionPane.showMessageDialog(this, "Заказ не найден", "Ошибка", JOptionPane.ERROR_MESSAGE);
+				return;
 			}
-		});
-		isEditFormOpen.set(true);
-		form.setVisible(true);
+
+			OrderFormFrame form = new OrderFormFrame(this, orderWithItems, currentUser);
+			form.addWindowListener(new java.awt.event.WindowAdapter() {
+				@Override
+				public void windowClosed(java.awt.event.WindowEvent e) {
+					isEditFormOpen.set(false);
+					refreshOrders();
+				}
+			});
+			isEditFormOpen.set(true);
+			form.setVisible(true);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(this, "Ошибка загрузки заказа: " + e.getMessage(), "Ошибка",
+					JOptionPane.ERROR_MESSAGE);
+		}
 	}
 
 	private void deleteOrder(Order order) {
@@ -438,7 +450,7 @@ public class OrderListFrame extends JFrame {
 		if (result == JOptionPane.YES_OPTION) {
 			try {
 				orderService.deleteOrder(order.getId());
-				refreshOrders(); // Обновляем список после удаления
+				refreshOrders();
 				JOptionPane.showMessageDialog(this, "Заказ успешно удалён", "Успешно", JOptionPane.INFORMATION_MESSAGE);
 			} catch (Exception e) {
 				JOptionPane.showMessageDialog(this, "Ошибка при удалении заказа: " + e.getMessage(), "Ошибка",
@@ -447,19 +459,12 @@ public class OrderListFrame extends JFrame {
 		}
 	}
 
-	/**
-	 * Обновляет список заказов, вызывается после добавления, редактирования или
-	 * удаления
-	 */
 	public void refreshOrders() {
-		// Сохраняем текущие настройки поиска и фильтра
 		String currentSearch = searchField.getText();
 		String currentStatus = (String) statusFilterCombo.getSelectedItem();
 
-		// Загружаем свежие данные из БД
 		loadOrders();
 
-		// Восстанавливаем настройки поиска и фильтра
 		if (currentSearch != null && !currentSearch.isEmpty()) {
 			searchField.setText(currentSearch);
 		}
@@ -467,7 +472,6 @@ public class OrderListFrame extends JFrame {
 			statusFilterCombo.setSelectedItem(currentStatus);
 		}
 
-		// Применяем фильтры
 		applyFiltersAndRefresh();
 	}
 }
